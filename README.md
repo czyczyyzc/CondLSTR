@@ -1,3 +1,7 @@
+# Generating Dynamic Kernels via Transformers for Lane Detection
+
+In this work, we propose a transformer-based dynamic kernel generation architecture for lane detection. It utilizes a transformer to generate dynamic convolutional kernels for each lane line in the input image, and then detect these lane lines with dynamic convolution.
+
 ## Framework
    ![The framwork of CondLSTR](docs/framework.jpg)
 
