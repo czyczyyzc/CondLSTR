@@ -220,6 +220,8 @@ class INfoProcessor(object):
             'intrinsics': cam_intrinsics.tolist(),
             'extrinsics': cam_extrinsics.tolist(),
         }
+        img_path = img_path.replace(self.root, '').strip('/')
+
         if self.version == '2d':
             img_info = {
                 'img_name':    img_name,
@@ -262,8 +264,8 @@ class INfoProcessor(object):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Data preprocessing for nuScenes dataset.')
-    parser.add_argument('--root', type=str, default='/data/gpfs/projects/punim1962/datasets/openlane')
+    parser = argparse.ArgumentParser(description='Data preprocessing for OpenLane dataset.')
+    parser.add_argument('--root', type=str, required=True)
     parser.add_argument('--version', type=str, default='3d')
     parser.add_argument('--num-workers', type=int, default=32)
 

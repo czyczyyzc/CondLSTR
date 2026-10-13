@@ -17,3 +17,4 @@ fvcore==0.1.5.post20221221
 timm==0.9.7
 webdataset==0.2.57
 ortools==9.7.2996
+scipy==1.10.1

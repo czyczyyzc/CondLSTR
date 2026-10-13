@@ -8,7 +8,7 @@ from .preprocess import lane_data_prep
 
 class OpenLaneDataset(Dataset):
 
-    def __init__(self, root, split='train', transform=None, version='v1.0'):
+    def __init__(self, root, split='train', transform=None, version='v1.0', **kwargs):
         self.root = root
         self.split = split
         self.transform = transform
@@ -26,7 +26,6 @@ class OpenLaneDataset(Dataset):
             # LoadImgMaskFromFile(),
         ])
         self.test_mode = self.split == 'test'
-        self.metadata, self.version = None, None
 
     def load_annotations(self, ann_file):
         """Load annotations from ann_file.

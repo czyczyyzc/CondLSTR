@@ -1,6 +1,16 @@
-# Generating Dynamic Kernels via Transformers for Lane Detection
+# CondLSTR: 2D and 3D Lane Detection
 
-In this work, we propose a transformer-based dynamic kernel generation architecture for lane detection. It utilizes a transformer to generate dynamic convolutional kernels for each lane line in the input image, and then detect these lane lines with dynamic convolution.
+This repository contains the ICCV 2023 CondLSTR implementation for 2D lane
+detection and the 3D journal extension. The 3D model uses lane representations
+as the key/value memory for BEV construction and generates the dynamic detection
+kernels used in both image and BEV views.
+
+The journal implementation, exact configurations, OpenLane training/evaluation
+entry points, complexity profiler, and controlled variants are under
+[`experiments/ijcv_3d`](experiments/ijcv_3d). Dataset adapters and official
+evaluator wrappers for OpenLane, ONCE-3DLanes, and ApolloSim are under
+[`data/datasets/lane`](data/datasets/lane) and
+[`tools/metrics/lane`](tools/metrics/lane).
 
 ## Framework
    ![The framwork of CondLSTR](docs/framework.jpg)
@@ -75,6 +85,67 @@ In this work, we propose a transformer-based dynamic kernel generation architect
 
 
 ## Training & Evaluation
+
+### Journal 3D model
+
+The released configuration uses a `368 x 480` input, a `50 x 32` BEV feature,
+a `400 x 256` output raster, 80 lane queries, and 50 training epochs. Prepare
+the OpenLane cache once:
+
+```bash
+python data/datasets/lane/openlane/preprocess.py \
+  --root /path/to/datasets/openlane --version 3d --num-workers 32
+```
+
+Train the complete model on four GPUs:
+
+```bash
+torchrun --standalone --nproc-per-node=4 -m experiments.ijcv_3d.train \
+  --data-root /path/to/datasets/openlane \
+  --config experiments/ijcv_3d/configs/complete.json \
+  --output /path/to/runs/condlstr_3d
+```
+
+Evaluate a checkpoint with the official OpenLane evaluator:
+
+```bash
+python -m experiments.ijcv_3d.evaluate \
+  --data-root /path/to/datasets/openlane \
+  --config experiments/ijcv_3d/configs/complete.json \
+  --checkpoint /path/to/runs/condlstr_3d/epoch_050.pt \
+  --output /path/to/runs/condlstr_3d/evaluation
+```
+
+Measure parameters, attributed FLOPs, synchronized BF16 batch-1 latency, and
+peak allocated memory:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python -m experiments.ijcv_3d.profile \
+  --data-root /path/to/datasets/openlane \
+  --config experiments/ijcv_3d/configs/complete.json \
+  --checkpoint /path/to/runs/condlstr_3d/epoch_050.pt \
+  --output /path/to/runs/condlstr_3d/profile
+```
+
+The controlled configurations are `3d_only.json`, `direct_3d.json`,
+`generic_tokens.json`, and `dense_image.json`. For the Same-O direct control,
+initialize and freeze the common representation path:
+
+```bash
+torchrun --standalone --nproc-per-node=4 -m experiments.ijcv_3d.train \
+  --data-root /path/to/datasets/openlane \
+  --config experiments/ijcv_3d/configs/direct_3d.json \
+  --init-common-from /path/to/runs/condlstr_3d/epoch_050.pt \
+  --freeze-common --output /path/to/runs/direct_3d
+```
+
+Run the configuration and CPU loss tests with:
+
+```bash
+python -m unittest discover -s experiments/ijcv_3d/tests -v
+```
+
+### Conference 2D model
    1. Training debug:
       ```
       python tools/train.py -a CondLSTR2DRes34 -d openlane -v 2d -c 21 -t lane_det_2d --data-dir /path/to/datasets/  --logs-dir /path/to/checkpoint -b 4 -j 4

@@ -42,8 +42,12 @@ import copy
 import math
 import json
 from scipy.interpolate import interp1d
-from utils.utils import *
-from utils.MinCostFlow import SolveMinCostFlow
+if __package__:
+    from .utils.utils import *
+    from .utils.MinCostFlow import SolveMinCostFlow
+else:
+    from utils.utils import *
+    from utils.MinCostFlow import SolveMinCostFlow
 
 
 class LaneEval(object):
@@ -273,9 +277,8 @@ class LaneEval(object):
             try:
                 with open(pred_lines,'r') as fp:
                     json_pred.append(json.load(fp))
-            except:
-                print(pred_file_path)
-                blacklist.append(pred_file_path)
+            except (OSError, json.JSONDecodeError) as error:
+                raise RuntimeError(f'Missing or invalid prediction: {pred_lines}') from error
 
         print("Loading gt json ...")
         for gt_file_path in gt_lines:
