@@ -5,6 +5,16 @@ import json
 import torch
 
 
+def autocast_dtype():
+    """Use native BF16 when available and FP16 on earlier CUDA hardware."""
+    return torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+
+
+def autocast_precision():
+    dtype = autocast_dtype()
+    return "bf16 autocast" if dtype == torch.bfloat16 else "fp16 autocast"
+
+
 def move(value, device):
     if torch.is_tensor(value):
         return value.to(device)

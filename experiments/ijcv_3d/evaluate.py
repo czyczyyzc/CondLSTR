@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from data.datasets.lane.openlane.openlane import OpenLaneDataset
 from experiments.ijcv_3d.data import openlane_transforms_3d, validate_geometry
 from experiments.ijcv_3d.geometry import bev_points_to_ego
-from experiments.ijcv_3d.io import move, write_json
+from experiments.ijcv_3d.io import autocast_dtype, move, write_json
 from experiments.ijcv_3d.model import build_model
 from tools.metrics.lane.openlane.lane3d.eval_3D_lane import LaneEval
 
@@ -24,7 +24,7 @@ def export_predictions(model, loader, output, device):
     with torch.no_grad():
         for batch in loader:
             metadata = batch["img_metas"][0]
-            with torch.autocast("cuda", dtype=torch.bfloat16):
+            with torch.autocast("cuda", dtype=autocast_dtype()):
                 prediction = model(move(batch, device))
             identity = "validation/" + metadata["filename"].replace(",", "/")
             identities.append(identity)

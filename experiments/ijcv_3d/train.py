@@ -18,7 +18,7 @@ from data.datasets.lane.openlane.openlane import OpenLaneDataset
 from experiments.ijcv_3d.data import openlane_transforms_3d, validate_geometry
 from experiments.ijcv_3d.model import build_model
 from experiments.ijcv_3d.geometry import bev_points_to_ego
-from experiments.ijcv_3d.io import move, write_json
+from experiments.ijcv_3d.io import autocast_dtype, autocast_precision, move, write_json
 from tools.metrics.lane.openlane.lane3d.eval_3D_lane import LaneEval
 from types import SimpleNamespace
 
@@ -47,7 +47,7 @@ def evaluate(model, dataset, collate, root, output, rank, world, device):
     with torch.no_grad():
         for batch in loader:
             meta = batch['img_metas'][0]
-            with torch.autocast('cuda', dtype=torch.bfloat16):
+            with torch.autocast('cuda', dtype=autocast_dtype()):
                 pred = model(move(batch, device))
             name = 'validation/' + meta['filename'].replace(',', '/')
             lanes = []
@@ -180,7 +180,7 @@ def main():
                         seed=args.seed, world_size=world, actual_epochs=epochs,
                         initialized_common_keys=initialized_common,
                         common_representation_frozen=args.freeze_common,
-                        precision='bf16 autocast; FP32 losses and voting', gradient_clip_norm=35.,
+                        precision=f'{autocast_precision()}; FP32 losses and voting', gradient_clip_norm=35.,
                         batch_normalization='SyncBatchNorm', parameters=sum(p.numel() for p in model.parameters()),
                         trainable_parameters=sum(p.numel() for p in model.parameters() if p.requires_grad),
                         data_sha256={s: sha256(args.data_root / f'openlane_infos_{s}_{args.cache_version}.pkl') for s in ('train', 'val')})
@@ -196,7 +196,7 @@ def main():
         ddp.train()
         for step, batch in enumerate(loader):
             optimizer.zero_grad(set_to_none=True)
-            with torch.autocast('cuda', dtype=torch.bfloat16):
+            with torch.autocast('cuda', dtype=autocast_dtype()):
                 losses = ddp(move(batch, device))
                 loss = sum(losses.values())
             if not torch.isfinite(loss):

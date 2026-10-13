@@ -18,7 +18,7 @@ from torch.utils.flop_counter import FlopCounterMode
 from data.datasets.lane.openlane.openlane import OpenLaneDataset
 from experiments.ijcv_3d.data import openlane_transforms_3d, validate_geometry
 from experiments.ijcv_3d.model import build_model
-from experiments.ijcv_3d.io import move, write_json
+from experiments.ijcv_3d.io import autocast_dtype, autocast_precision, move, write_json
 
 
 def file_sha256(path):
@@ -67,7 +67,7 @@ def main():
         kind='single_gpu_checkpoint_complexity', config=config, checkpoint=str(args.checkpoint),
         checkpoint_sha256=file_sha256(args.checkpoint), checkpoint_epoch=state.get('epoch'),
         code_commit=git('rev-parse', 'HEAD'), dirty=git('status', '--porcelain'),
-        sample=dataset.data_infos[0]['img_path'], batch_size=1, precision='bf16 autocast',
+        sample=dataset.data_infos[0]['img_path'], batch_size=1, precision=autocast_precision(),
         input_shape=list(batch['img'].shape), bev_feature_shape=config.get('bev_feature_shape'),
         warmup=args.warmup, iterations=args.iterations, preprocessing_and_file_io_included=False,
         model_postprocessing_included=True, cuda_synchronized_each_iteration=True,
@@ -79,7 +79,7 @@ def main():
     write_json(args.output / 'protocol.json', protocol)
     with torch.no_grad():
         for _ in range(args.warmup):
-            with torch.autocast('cuda', dtype=torch.bfloat16):
+            with torch.autocast('cuda', dtype=autocast_dtype()):
                 model(batch)
         torch.cuda.synchronize()
         torch.cuda.reset_peak_memory_stats()
@@ -87,7 +87,7 @@ def main():
         for _ in range(args.iterations):
             torch.cuda.synchronize()
             started = time.perf_counter_ns()
-            with torch.autocast('cuda', dtype=torch.bfloat16):
+            with torch.autocast('cuda', dtype=autocast_dtype()):
                 model(batch)
             torch.cuda.synchronize()
             elapsed_ms.append((time.perf_counter_ns() - started) / 1e6)
@@ -108,7 +108,7 @@ def main():
         restore_target = model
     try:
         with FlopCounterMode(display=False) as counter:
-            with torch.autocast('cuda', dtype=torch.bfloat16):
+            with torch.autocast('cuda', dtype=autocast_dtype()):
                 flop_output = model(batch)
         torch.cuda.synchronize()
         del flop_output

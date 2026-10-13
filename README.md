@@ -116,8 +116,10 @@ python -m experiments.ijcv_3d.evaluate \
   --output /path/to/runs/condlstr_3d/evaluation
 ```
 
-Measure parameters, attributed FLOPs, synchronized BF16 batch-1 latency, and
-peak allocated memory:
+Measure parameters, attributed FLOPs, synchronized mixed-precision batch-1
+latency, and peak allocated memory. The profiler uses FP16 on V100 and BF16 on
+GPUs with native BF16 support, and records the selected precision in
+`protocol.json`:
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python -m experiments.ijcv_3d.profile \
