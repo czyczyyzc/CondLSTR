@@ -24,13 +24,13 @@ def main():
 
         with jsonlines.open(os.path.join(args.pred_dir, 'results.json'), mode='w') as json_writer:
             for result in tqdm(results_list):
-                img_path = os.path.join(args.anno_dir, result['image_name'].replace(',', '/'))
+                img_path = os.path.join(args.anno_dir, result['img_name'].replace(',', '/'))
 
                 if not os.path.exists(img_path):
                     print(img_path)
                     continue
-                lanelines_pred = result['3d_res']
-                lanelines_conf = result['score']
+                lanelines_pred = result['points_3d']
+                lanelines_conf = result['scores']
 
                 file_path = '/'.join(img_path.split('/')[-3:])
                 result_dict = {
@@ -85,12 +85,12 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Measure OpenLane's metric")
     parser.add_argument(
         "--pred_dir",
-        default='/data/chenziye/HDMapNet/output/test_bev_cond_lstr_attr_data_aug_apollo_latest',
+        default='/data/gpfs/projects/punim1962/project/HDMapNet/output/test_cond_lstr_3d_effb7_apollo_sim_vote_new',
         help="Path to directory containing the predicted lanes"
     )
     parser.add_argument(
         "--anno_dir",
-        default='/data/sets/apollo_sim/',
+        default='/data/gpfs/projects/punim1962/datasets/apollo_sim/',
         help="Path to directory containing the annotated lanes"
     )
     parser.add_argument("--top_view_region",

@@ -65,7 +65,7 @@ def lane_data_prep(root_path,
     info_train_path = osp.join(root_path, '{}_infos_train_{}.pkl'.format(info_prefix, version))
     with open(info_train_path, 'wb') as file:
         pickle.dump(data, file)
-    
+
     data = dict(infos=val_data_infos, metadata=metadata)
     info_val_path = osp.join(root_path, '{}_infos_val_{}.pkl'.format(info_prefix, version))
     with open(info_val_path, 'wb') as file:
@@ -265,7 +265,7 @@ class INfoProcessor(object):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Data preprocessing for OpenLane dataset.')
-    parser.add_argument('--root', type=str, required=True)
+    parser.add_argument('--root', type=str, default='/data/gpfs/projects/punim1962/datasets/openlane')
     parser.add_argument('--version', type=str, default='3d')
     parser.add_argument('--num-workers', type=int, default=32)
 

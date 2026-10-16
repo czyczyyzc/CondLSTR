@@ -209,10 +209,10 @@ class Visualizer:
 
         for j in range(lane_anchor.shape[0]):
             # draw laneline
-            if draw_type is 'laneline' and lane_anchor[j, self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'laneline' and lane_anchor[j, self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, :self.num_y_steps]
                 x_3d = x_offsets + self.anchor_x_steps[j]
-                if P_g2im.shape[1] is 3:
+                if P_g2im.shape[1] == 3:
                     x_2d, y_2d = homographic_transformation(P_g2im, x_3d, self.anchor_y_steps)
                 else:
                     z_3d = lane_anchor[j, self.num_y_steps:self.anchor_dim - 1]
@@ -223,10 +223,10 @@ class Visualizer:
                     img = cv2.line(img, (x_2d[k - 1], y_2d[k - 1]), (x_2d[k], y_2d[k]), color, 2)
 
             # draw centerline
-            if draw_type is 'centerline' and lane_anchor[j, 2 * self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'centerline' and lane_anchor[j, 2 * self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, self.anchor_dim:self.anchor_dim + self.num_y_steps]
                 x_3d = x_offsets + self.anchor_x_steps[j]
-                if P_g2im.shape[1] is 3:
+                if P_g2im.shape[1] == 3:
                     x_2d, y_2d = homographic_transformation(P_g2im, x_3d, self.anchor_y_steps)
                 else:
                     z_3d = lane_anchor[j, self.anchor_dim + self.num_y_steps:2 * self.anchor_dim - 1]
@@ -237,10 +237,10 @@ class Visualizer:
                     img = cv2.line(img, (x_2d[k - 1], y_2d[k - 1]), (x_2d[k], y_2d[k]), color, 2)
 
             # draw the additional centerline for the merging case
-            if draw_type is 'centerline' and lane_anchor[j, 3 * self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'centerline' and lane_anchor[j, 3 * self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, 2 * self.anchor_dim:2 * self.anchor_dim + self.num_y_steps]
                 x_3d = x_offsets + self.anchor_x_steps[j]
-                if P_g2im.shape[1] is 3:
+                if P_g2im.shape[1] == 3:
                     x_2d, y_2d = homographic_transformation(P_g2im, x_3d, self.anchor_y_steps)
                 else:
                     z_3d = lane_anchor[j, 2 * self.anchor_dim + self.num_y_steps:3 * self.anchor_dim - 1]
@@ -262,10 +262,10 @@ class Visualizer:
         """
         for j in range(lane_anchor.shape[0]):
             # draw laneline
-            if draw_type is 'laneline' and lane_anchor[j, self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'laneline' and lane_anchor[j, self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, :self.num_y_steps]
                 x_3d = x_offsets + self.anchor_x_steps[j]
-                if P_g2im.shape[1] is 3:
+                if P_g2im.shape[1] == 3:
                     x_2d, y_2d = homographic_transformation(P_g2im, x_3d, self.anchor_y_steps)
                     visibility = np.ones_like(x_2d)
                 else:
@@ -281,10 +281,10 @@ class Visualizer:
                         img = cv2.line(img, (x_2d[k - 1], y_2d[k - 1]), (x_2d[k], y_2d[k]), [0, 0, 0], 2)
 
             # draw centerline
-            if draw_type is 'centerline' and lane_anchor[j, 2 * self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'centerline' and lane_anchor[j, 2 * self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, self.anchor_dim:self.anchor_dim + self.num_y_steps]
                 x_3d = x_offsets + self.anchor_x_steps[j]
-                if P_g2im.shape[1] is 3:
+                if P_g2im.shape[1] == 3:
                     x_2d, y_2d = homographic_transformation(P_g2im, x_3d, self.anchor_y_steps)
                     visibility = np.ones_like(x_2d)
                 else:
@@ -300,10 +300,10 @@ class Visualizer:
                         img = cv2.line(img, (x_2d[k - 1], y_2d[k - 1]), (x_2d[k], y_2d[k]), [0, 0, 0], 2)
 
             # draw the additional centerline for the merging case
-            if draw_type is 'centerline' and lane_anchor[j, 3*self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'centerline' and lane_anchor[j, 3*self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, 2*self.anchor_dim:2*self.anchor_dim + self.num_y_steps]
                 x_3d = x_offsets + self.anchor_x_steps[j]
-                if P_g2im.shape[1] is 3:
+                if P_g2im.shape[1] == 3:
                     x_2d, y_2d = homographic_transformation(P_g2im, x_3d, self.anchor_y_steps)
                     visibility = np.ones_like(x_2d)
                 else:
@@ -323,7 +323,7 @@ class Visualizer:
     def draw_on_ipm(self, im_ipm, lane_anchor, draw_type='laneline', color=[0, 0, 1]):
         for j in range(lane_anchor.shape[0]):
             # draw laneline
-            if draw_type is 'laneline' and lane_anchor[j, self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'laneline' and lane_anchor[j, self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, :self.num_y_steps]
                 x_g = x_offsets + self.anchor_x_steps[j]
 
@@ -336,7 +336,7 @@ class Visualizer:
                                       (x_ipm[k], y_ipm[k]), color, 1)
 
             # draw centerline
-            if draw_type is 'centerline' and lane_anchor[j, 2 * self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'centerline' and lane_anchor[j, 2 * self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, self.anchor_dim:self.anchor_dim + self.num_y_steps]
                 x_g = x_offsets + self.anchor_x_steps[j]
 
@@ -349,7 +349,7 @@ class Visualizer:
                                       (x_ipm[k], y_ipm[k]), color, 1)
 
             # draw the additional centerline for the merging case
-            if draw_type is 'centerline' and lane_anchor[j, 3 * self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'centerline' and lane_anchor[j, 3 * self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, 2 * self.anchor_dim:2 * self.anchor_dim + self.num_y_steps]
                 x_g = x_offsets + self.anchor_x_steps[j]
 
@@ -365,7 +365,7 @@ class Visualizer:
     def draw_on_ipm_new(self, im_ipm, lane_anchor, draw_type='laneline', color=[0, 0, 1], width=1):
         for j in range(lane_anchor.shape[0]):
             # draw laneline
-            if draw_type is 'laneline' and lane_anchor[j, self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'laneline' and lane_anchor[j, self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, :self.num_y_steps]
                 x_g = x_offsets + self.anchor_x_steps[j]
                 if self.no_3d:
@@ -386,7 +386,7 @@ class Visualizer:
                                           (x_ipm[k], y_ipm[k]), [0, 0, 0], width)
 
             # draw centerline
-            if draw_type is 'centerline' and lane_anchor[j, 2*self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'centerline' and lane_anchor[j, 2*self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, self.anchor_dim:self.anchor_dim + self.num_y_steps]
                 x_g = x_offsets + self.anchor_x_steps[j]
                 if self.no_3d:
@@ -407,7 +407,7 @@ class Visualizer:
                                           (x_ipm[k], y_ipm[k]), [0, 0, 0], width)
 
             # draw the additional centerline for the merging case
-            if draw_type is 'centerline' and lane_anchor[j, 3*self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'centerline' and lane_anchor[j, 3*self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, 2*self.anchor_dim:2*self.anchor_dim + self.num_y_steps]
                 x_g = x_offsets + self.anchor_x_steps[j]
                 if self.no_3d:
@@ -431,7 +431,7 @@ class Visualizer:
     def draw_3d_curves(self, ax, lane_anchor, draw_type='laneline', color=[0, 0, 1]):
         for j in range(lane_anchor.shape[0]):
             # draw laneline
-            if draw_type is 'laneline' and lane_anchor[j, self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'laneline' and lane_anchor[j, self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, :self.num_y_steps]
                 x_g = x_offsets + self.anchor_x_steps[j]
                 if self.no_3d:
@@ -441,7 +441,7 @@ class Visualizer:
                 ax.plot(x_g, self.anchor_y_steps, z_g, color=color)
 
             # draw centerline
-            if draw_type is 'centerline' and lane_anchor[j, 2*self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'centerline' and lane_anchor[j, 2*self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, self.anchor_dim:self.anchor_dim + self.num_y_steps]
                 x_g = x_offsets + self.anchor_x_steps[j]
                 if self.no_3d:
@@ -451,7 +451,7 @@ class Visualizer:
                 ax.plot(x_g, self.anchor_y_steps, z_g, color=color)
 
             # draw the additional centerline for the merging case
-            if draw_type is 'centerline' and lane_anchor[j, 3*self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'centerline' and lane_anchor[j, 3*self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, 2*self.anchor_dim:2*self.anchor_dim + self.num_y_steps]
                 x_g = x_offsets + self.anchor_x_steps[j]
                 if self.no_3d:
@@ -463,7 +463,7 @@ class Visualizer:
     def draw_3d_curves_new(self, ax, lane_anchor, h_cam, draw_type='laneline', color=[0, 0, 1]):
         for j in range(lane_anchor.shape[0]):
             # draw laneline
-            if draw_type is 'laneline' and lane_anchor[j, self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'laneline' and lane_anchor[j, self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, :self.num_y_steps]
                 x_gflat = x_offsets + self.anchor_x_steps[j]
                 if self.no_3d:
@@ -483,7 +483,7 @@ class Visualizer:
                     ax.plot(x_g, y_g, z_g, color=color)
 
             # draw centerline
-            if draw_type is 'centerline' and lane_anchor[j, 2*self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'centerline' and lane_anchor[j, 2*self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, self.anchor_dim:self.anchor_dim + self.num_y_steps]
                 x_gflat = x_offsets + self.anchor_x_steps[j]
                 if self.no_3d:
@@ -503,7 +503,7 @@ class Visualizer:
                     ax.plot(x_g, y_g, z_g, color=color)
 
             # draw the additional centerline for the merging case
-            if draw_type is 'centerline' and lane_anchor[j, 3*self.anchor_dim - 1] > self.prob_th:
+            if draw_type == 'centerline' and lane_anchor[j, 3*self.anchor_dim - 1] > self.prob_th:
                 x_offsets = lane_anchor[j, 2*self.anchor_dim:2*self.anchor_dim + self.num_y_steps]
                 x_gflat = x_offsets + self.anchor_x_steps[j]
                 if self.no_3d:
@@ -1009,7 +1009,7 @@ def nms_1d(v):
     if len < 2:
         return v
     for i in range(len):
-        if i is not 0 and v[i - 1] > v[i]:
+        if i != 0 and v[i - 1] > v[i]:
             v_out[i] = 0.
         elif i is not len-1 and v[i+1] > v[i]:
             v_out[i] = 0.
@@ -1024,7 +1024,7 @@ def first_run(save_path):
         saved_epoch = open(txt_file).read()
         if saved_epoch is None:
             print('You forgot to delete [first run file]')
-            return '' 
+            return ''
         return saved_epoch
     return ''
 

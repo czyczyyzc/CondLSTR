@@ -6,7 +6,6 @@ import copy
 import pickle
 import argparse
 import numpy as np
-import timeout_decorator
 from tqdm import tqdm
 from os import path as osp
 from concurrent.futures import ProcessPoolExecutor
@@ -71,7 +70,7 @@ def lane_data_prep(root_path,
     info_train_path = osp.join(root_path, '{}_infos_train_{}.pkl'.format(info_prefix, version))
     with open(info_train_path, 'wb') as file:
         pickle.dump(data, file)
-    
+
     data = dict(infos=val_data_infos, metadata=metadata)
     info_val_path = osp.join(root_path, '{}_infos_val_{}.pkl'.format(info_prefix, version))
     with open(info_val_path, 'wb') as file:
@@ -122,7 +121,7 @@ class INfoProcessor(object):
         if 'category' in info_dict:
             gt_category = info_dict['category']
         else:
-            gt_category = [1 for _ in range(len(gt_lanes))]
+            gt_category = [0 for _ in range(len(gt_lanes))]
 
         cam_intrinsics = np.array([[2015., 0., 960.],
                                    [0., 2015., 540.],
@@ -188,6 +187,7 @@ class INfoProcessor(object):
             'intrinsics': cam_intrinsics.tolist(),
             'extrinsics': cam_extrinsics.tolist(),
         }
+        img_path = img_path.replace(self.root, '').strip('/')
 
         img_info = {
             'img_name':    img_name,
@@ -222,10 +222,10 @@ class INfoProcessor(object):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Data preprocessing for nuScenes dataset.')
-    parser.add_argument('--root', type=str, default='/data/sets/apollo_sim')
+    parser = argparse.ArgumentParser(description='Data preprocessing for Apollo Synthetic dataset.')
+    parser.add_argument('--root', type=str, default='/data/gpfs/projects/punim1962/datasets/apollo_sim')
     parser.add_argument('--version', type=str, default='v1.0')
-    parser.add_argument('--num-workers', type=int, default=32)
+    parser.add_argument('--num-workers', type=int, default=8)
 
     args = parser.parse_args()
 

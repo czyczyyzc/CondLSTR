@@ -5,16 +5,15 @@ detection and the 3D journal extension. The 3D model uses lane representations
 as the key/value memory for BEV construction and generates the dynamic detection
 kernels used in both image and BEV views.
 
-The canonical unified journal model is
-[`modeling/models/models/lane/cond_lstr_3d.py`](modeling/models/models/lane/cond_lstr_3d.py),
-and its paired image-view/BEV objective is
-[`modeling/models/detectors/lane/cond_lstr_vote_3d/journal_loss.py`](modeling/models/detectors/lane/cond_lstr_vote_3d/journal_loss.py).
-The exact configurations, OpenLane training/evaluation entry points, complexity
-profiler, and controlled variants are under
-[`experiments/ijcv_3d`](experiments/ijcv_3d); these runners import the canonical
-model rather than keeping a second implementation. Dataset adapters and official
-evaluator wrappers for OpenLane, ONCE-3DLanes, and ApolloSim are under
-[`data/datasets/lane`](data/datasets/lane) and
+The 3D code is integrated into the same package hierarchy as the original 2D
+implementation. The ResNet-34 entry point is
+[`modeling/models/models/lane/cond_lstr_3d_res34.py`](modeling/models/models/lane/cond_lstr_3d_res34.py),
+the voting head is
+[`modeling/models/detectors/lane/cond_lstr_vote_3d`](modeling/models/detectors/lane/cond_lstr_vote_3d),
+and both 2D and 3D models use the common training and testing programs in
+[`tools/train.py`](tools/train.py) and [`tools/test.py`](tools/test.py).
+Dataset adapters and evaluator wrappers for OpenLane, ONCE-3DLanes, and
+ApolloSim are under [`data/datasets/lane`](data/datasets/lane) and
 [`tools/metrics/lane`](tools/metrics/lane).
 
 ## Framework
@@ -91,69 +90,66 @@ evaluator wrappers for OpenLane, ONCE-3DLanes, and ApolloSim are under
 
 ## Training & Evaluation
 
-### Unified journal model
+### 3D lane models
 
-The complete configuration jointly trains the image-view and BEV branches. The
-same image-conditioned lane representations generate both prediction branches
-and serve as the BEV decoder memory, while one paired assignment supervises the
-two views. It uses a `368 x 480` input, a `50 x 32` BEV feature, a `400 x 256`
-output raster, 80 lane queries, and 50 training epochs. Prepare the OpenLane
-cache once:
+The 3D implementation follows the same repository layout as the 2D release and
+HDMapNet. Model wrappers are registered from
+[`modeling/models/models/lane`](modeling/models/models/lane), the lane-level
+`SwapTransformer` and pixel-level `Transformer` live under
+[`modeling/models/backbones`](modeling/models/backbones), and the 3D detection
+heads and losses live under
+[`modeling/models/detectors/lane`](modeling/models/detectors/lane). OpenLane,
+ONCE-3DLanes, and ApolloSim datasets, transforms, post-processing, and evaluator
+wrappers are kept in their corresponding `data` and `tools` packages.
+
+Prepare the OpenLane cache:
 
 ```bash
 python data/datasets/lane/openlane/preprocess.py \
   --root /path/to/datasets/openlane --version 3d --num-workers 32
 ```
 
-Train the complete model on four GPUs:
+Train the ResNet-34 3D model through the repository's standard training entry
+point:
 
 ```bash
-torchrun --standalone --nproc-per-node=4 -m experiments.ijcv_3d.train \
-  --data-root /path/to/datasets/openlane \
-  --config experiments/ijcv_3d/configs/complete.json \
-  --output /path/to/runs/condlstr_3d
+python tools/train.py \
+  -a CondLSTR3DRes34 -d openlane -v 3d -c 21 -t lane_det_3d \
+  --data-dir /path/to/datasets --logs-dir /path/to/checkpoint \
+  -b 4 -j 4 -e 50 --lr 1e-4 --milestones 40 --max-grad 35
 ```
 
-Evaluate a checkpoint with the official OpenLane evaluator:
+For four-GPU training:
 
 ```bash
-python -m experiments.ijcv_3d.evaluate \
-  --data-root /path/to/datasets/openlane \
-  --config experiments/ijcv_3d/configs/complete.json \
-  --checkpoint /path/to/runs/condlstr_3d/epoch_050.pt \
-  --output /path/to/runs/condlstr_3d/evaluation
+python -m torch.distributed.launch --nproc_per_node=4 tools/train.py \
+  -a CondLSTR3DRes34 -d openlane -v 3d -c 21 -t lane_det_3d \
+  --data-dir /path/to/datasets --logs-dir /path/to/checkpoint \
+  --gpu-ids 0,1,2,3 -b 4 -j 4 -e 50 --lr 1e-4 \
+  --milestones 40 --max-grad 35
 ```
 
-Measure parameters, attributed FLOPs, synchronized mixed-precision batch-1
-latency, and peak allocated memory. The profiler uses FP16 on V100 and BF16 on
-GPUs with native BF16 support, and records the selected precision in
-`protocol.json`:
+Evaluation and prediction export use the same standard entry points:
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python -m experiments.ijcv_3d.profile \
-  --data-root /path/to/datasets/openlane \
-  --config experiments/ijcv_3d/configs/complete.json \
-  --checkpoint /path/to/runs/condlstr_3d/epoch_050.pt \
-  --output /path/to/runs/condlstr_3d/profile
+python tools/train.py \
+  -a CondLSTR3DRes34 -d openlane -v 3d -c 21 -t lane_det_3d \
+  --data-dir /path/to/datasets --logs-dir /path/to/checkpoint \
+  -b 1 -j 4 --resume --eval
+
+python tools/test.py \
+  -a CondLSTR3DRes34 -d openlane -v 3d -c 21 -t lane_det_3d \
+  --data-dir /path/to/datasets --logs-dir /path/to/checkpoint \
+  --test-dir /path/to/output -b 1 -j 4
+
+python tools/metrics/lane/openlane/openlane_3d.py \
+  --pred-dir /path/to/output --anno-dir /path/to/datasets/openlane \
+  --translate
 ```
 
-The controlled configurations are `3d_only.json`, `direct_3d.json`,
-`generic_tokens.json`, and `dense_image.json`. For the Same-O direct control,
-initialize and freeze the common representation path:
-
-```bash
-torchrun --standalone --nproc-per-node=4 -m experiments.ijcv_3d.train \
-  --data-root /path/to/datasets/openlane \
-  --config experiments/ijcv_3d/configs/direct_3d.json \
-  --init-common-from /path/to/runs/condlstr_3d/epoch_050.pt \
-  --freeze-common --output /path/to/runs/direct_3d
-```
-
-Run the configuration and CPU loss tests with:
-
-```bash
-python -m unittest discover -s experiments/ijcv_3d/tests -v
-```
+The registered 3D variants include ResNet-18/34/101 and EfficientNet-B7
+backbones, the pixel-level transformer control `CondLSTR3DRes34TR`, and the
+`CondLSTR3DRes34No2D` and `CondLSTR3DRes34NoSup` ablations.
 
 ### Conference 2D model
    1. Training debug:

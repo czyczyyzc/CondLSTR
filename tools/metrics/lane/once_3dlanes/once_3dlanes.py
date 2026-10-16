@@ -21,11 +21,11 @@ def main():
 
         for result in tqdm(results_list):
             ann_path = os.path.join(args.anno_dir, 'test',
-                                    result['image_name'].replace(',', '/').replace('.jpg', '.json'))
+                                    result['img_name'].replace(',', '/').replace('.jpg', '.json'))
             img_path = os.path.join(args.anno_dir, 'data',
-                                    result['image_name'].replace(',', '/'))
+                                    result['img_name'].replace(',', '/'))
             res_path = os.path.join(args.pred_dir, 'test',
-                                    result['image_name'].replace(',', '/').replace('.jpg', '.json'))
+                                    result['img_name'].replace(',', '/').replace('.jpg', '.json'))
 
             if not (os.path.exists(ann_path) and os.path.exists(img_path)):
                 print(ann_path)
@@ -49,8 +49,8 @@ def main():
                 R_vg), R_gc)
             cam_extrinsics[0:2, 3] = 0.0
 
-            lanelines_pred = result['3d_res']
-            lanelines_conf = result['score']
+            lanelines_pred = result['points_3d']
+            lanelines_conf = result['scores']
 
             lane_lines = []
             for k in range(len(lanelines_pred)):
@@ -92,12 +92,12 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Measure ONCE_3DLanes's metric")
     parser.add_argument(
         "--pred_dir",
-        default='/data/gpfs/projects/punim1962/project/HDMapNet/output/test_bev_cond_lstr_attr_once_proj_3d_swin_2_laetst',
+        default="/data/gpfs/projects/punim1962/project/HDMapNet/output/test_cond_lstr_3d_res34_no2d_once_vote_new",
         help="Path to directory containing the predicted lanes"
     )
     parser.add_argument(
         "--anno_dir",
-        default='/data/gpfs/projects/punim1962/datasets/once_3dlanes/',
+        default="/data/gpfs/projects/punim1962/datasets/once_3dlanes/",
         help="Path to directory containing the annotated lanes"
     )
     parser.add_argument("--top_view_region",

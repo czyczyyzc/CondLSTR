@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .utils import compute_locations, cal_num_params
+from .loss import CondLSTRVote3DLoss
 from .postprocess import CondLSTRVote3DPost
 
 
@@ -166,8 +167,7 @@ class CondLSTRVote3D(nn.Module):
                  eos_coef=0.1,
                  mask_downscale=4,
                  with_smooth=False,
-                 with_2d=True,
-                 loss_module=None):
+                 with_2d=True):
         super(CondLSTRVote3D, self).__init__()
         self.num_classes = num_classes
         self.min_points = min_points
@@ -260,17 +260,12 @@ class CondLSTRVote3D(nn.Module):
             msk_weight=10.,
             reg_weight=1.,)
 
-        if loss_module is None:
-            # Kept for compatibility with older callers. The journal model
-            # passes its Focal+Dice objective explicitly.
-            from .loss import CondLSTRVote3DLoss
-            loss_module = CondLSTRVote3DLoss(
-                min_points=self.min_points,
-                line_width=self.line_width,
-                weight_dict=loss_weights,
-                eos_coef=eos_coef,
-                with_2d=with_2d)
-        self.loss = loss_module
+        self.loss = CondLSTRVote3DLoss(
+            min_points=self.min_points,
+            line_width=self.line_width,
+            weight_dict=loss_weights,
+            eos_coef=eos_coef,
+            with_2d=with_2d)
 
         self.postprocess = CondLSTRVote3DPost(
             min_points=self.min_points,

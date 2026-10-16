@@ -22,12 +22,20 @@ class SwapTransformer(nn.Module):
                  num_memory_embeds=256, num_encoder_layers=6, dim_feedforward=2048, dropout=0.1,
                  activation='relu', normalize_before=False, return_intermediate_dec=False,
                  src_pos_encode='sine', tgt_pos_encode='learned', src_cam_encode=False,
-                 tgt_cam_encode=False, use_fix_encode=False, use_checkpoint=False, use_input_proj=True):
+                 tgt_cam_encode=False, use_fix_encode=False, use_input_proj=True, use_checkpoint=False):
         super().__init__()
+        if isinstance(in_channels, int):
+            in_channels = [in_channels]
         if use_input_proj:
-            self.input_proj = nn.Conv2d(in_channels, d_model, kernel_size=1)
+            if len(in_channels) >= 2:
+                self.src_input_proj = nn.Conv2d(in_channels[0], d_model, kernel_size=1)
+                self.tgt_input_proj = nn.Conv2d(in_channels[1], d_model, kernel_size=1)
+            else:
+                self.src_input_proj = nn.Conv2d(in_channels[0], d_model, kernel_size=1)
+                self.tgt_input_proj = nn.Identity()
         else:
-            self.input_proj = nn.Identity()
+            self.src_input_proj = nn.Identity()
+            self.tgt_input_proj = nn.Identity()
 
         encoder_layer = SwapTransformerEncoderLayer(d_model, n_heads, dim_feedforward, dropout, activation,
                                                     normalize_before, use_checkpoint)
@@ -99,10 +107,10 @@ class SwapTransformer(nn.Module):
         if len(src.shape) == 4:
             bs, _, h_src, w_src = src.shape
             d_src = None
-            src = self.input_proj(src)                                                               # (N, C, H, W)
+            src = self.src_input_proj(src)                                                           # (N, C, H, W)
         else:
             bs, d_src, _, h_src, w_src = src.shape
-            src = self.input_proj(src.flatten(0, 1))
+            src = self.src_input_proj(src.flatten(0, 1))
             src = src.view(bs, d_src, -1, h_src, w_src)                                              # (N, D, C, H, W)
 
         if self.use_fix_encode:
@@ -153,6 +161,7 @@ class SwapTransformer(nn.Module):
 
         # For target
         if tgt is not None:
+            tgt = self.tgt_input_proj(tgt)                                                           # (N, C, H, W)
             h_tgt, w_tgt = tgt.shape[-2:]
         elif tgt_pos_embed is not None:
             h_tgt, w_tgt = tgt_pos_embed.shape[-2:]

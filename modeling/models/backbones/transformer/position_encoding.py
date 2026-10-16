@@ -32,8 +32,14 @@ class PositionEmbeddingSine(nn.Module):
         x_embed = not_mask.cumsum(2, dtype=torch.float32)
         if self.normalize:
             eps = 1e-6
-            y_embed = (y_embed - 0.5) / (y_embed[:, -1:, :] + eps) * self.scale
-            x_embed = (x_embed - 0.5) / (x_embed[:, :, -1:] + eps) * self.scale
+            # Fully padded rows or columns have zero extent. Keep their coordinates
+            # finite so reduced-precision inference does not overflow before sin/cos.
+            y_extent = y_embed[:, -1:, :]
+            x_extent = x_embed[:, :, -1:]
+            y_extent = y_extent + (y_extent == 0).to(dtype=y_extent.dtype)
+            x_extent = x_extent + (x_extent == 0).to(dtype=x_extent.dtype)
+            y_embed = (y_embed - 0.5) / (y_extent + eps) * self.scale
+            x_embed = (x_embed - 0.5) / (x_extent + eps) * self.scale
 
         dim_t = torch.arange(self.num_pos_feats // 2, dtype=torch.float32, device=mask.device)
         dim_t = self.temperature ** (2 * (dim_t // 2) / (self.num_pos_feats // 2))

@@ -1,6 +1,6 @@
 from torchvision.transforms import Compose
 from collections import defaultdict
-from .transforms import *
+from .lane import *
 
 
 def openlane_transforms_2d(train=True, version='2d', **kwargs):
@@ -71,17 +71,17 @@ def openlane_transforms_3d(train=True, version='3d', **kwargs):
         mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
     keys = ['img', 'img_mask', 'bev_mask', 'lane_points', 'lane_attris', 'depth_prior']
 
-    img_w = 960
-    img_h = 640
-    bev_w = 320
-    bev_h = 1600
-
+    img_w = 768   # 480  # 960
+    img_h = 512   # 384  # 640
+    bev_w = 384   # 256  # 512
+    bev_h = 768   # 512  # 1024
     bev_range = np.array([-10, 3, 10, 103])
+    bev_z_scale = 20
     cut_height = 0
     if train:
         data_transforms = Compose([
             GenerateLaneLine3D(
-                img_h, img_w, bev_h, bev_w, bev_range, img_flip_p=0.5, img_rotate=10,
+                img_h, img_w, bev_h, bev_w, bev_range, bev_z_scale, img_flip_p=0.5, img_rotate=10,
                 cut_height=cut_height, theta_x=0, theta_y=0, theta_z=0, tx=0, ty=0, tz=0),
             Normalize(**img_norm_cfg),
             Pad(size_divisor=32),
@@ -90,7 +90,7 @@ def openlane_transforms_3d(train=True, version='3d', **kwargs):
     else:
         data_transforms = Compose([
             GenerateLaneLine3D(
-                img_h, img_w, bev_h, bev_w, bev_range, img_flip_p=0, img_rotate=0,
+                img_h, img_w, bev_h, bev_w, bev_range, bev_z_scale, img_flip_p=0, img_rotate=0,
                 cut_height=cut_height, theta_x=0, theta_y=0, theta_z=0, tx=0, ty=0, tz=0),
             Normalize(**img_norm_cfg),
             Pad(size_divisor=32),
@@ -107,17 +107,17 @@ def collate_fn_2d(data_list):
             data['img_mask'] = torch.zeros((0, *img_shape), dtype=torch.uint8)
         elif len(data['img_mask'].shape) == 2:
             data['img_mask'] = data['img_mask'].unsqueeze(0)
-        
+
         if 'lane_attris' not in data:
             data['lane_attris'] = torch.zeros(len(data['lane_points']), dtype=torch.int32)
-        
+
         for key, value in data.items():
             result[key].append(value)
-    
+
     result['img'] = torch.stack(result['img'], dim=0)
     for img_meta in result['img_metas']:
         class_weight = torch.tensor([
-            1, 1.10944152, 1., 25.73526669, 10.4877997, 19.31613351, 20.33392954, 4.852459, 3.8657429, 16.94360171, 
+            1, 1.10944152, 1., 25.73526669, 10.4877997, 19.31613351, 20.33392954, 4.852459, 3.8657429, 16.94360171,
             1.87146866, 4.16201426, 4.20553516, 1., 1., 1., 1., 1., 1., 1., 1.05482755], dtype=torch.float32)
         img_meta.update(class_weight=class_weight)
     return result
@@ -131,24 +131,24 @@ def collate_fn_3d(data_list):
             data['img_mask'] = torch.zeros((0, 2, *img_shape), dtype=torch.uint8)
         else:
             data['img_mask'] = data['img_mask'].reshape(-1, 2, *img_shape)
-        
+
         bev_shape = data['img_metas']['bev_shape'][:2]
         if 'bev_mask' not in data:
             data['bev_mask'] = torch.zeros((0, 2, *bev_shape), dtype=torch.uint8)
         else:
             data['bev_mask'] = data['bev_mask'].reshape(-1, 2, *bev_shape)
-        
+
         if 'lane_attris' not in data:
             data['lane_attris'] = torch.zeros(len(data['lane_points']), dtype=torch.int32)
-        
+
         for key, value in data.items():
             result[key].append(value)
-    
+
     result['img'] = torch.stack(result['img'], dim=0)
     result['depth_prior'] = torch.stack(result['depth_prior'], dim=0)
     for img_meta in result['img_metas']:
         class_weight = torch.tensor([
-            1, 1.10944152, 1., 25.73526669, 10.4877997, 19.31613351, 20.33392954, 4.852459, 3.8657429, 16.94360171, 
+            1, 1.10944152, 1., 25.73526669, 10.4877997, 19.31613351, 20.33392954, 4.852459, 3.8657429, 16.94360171,
             1.87146866, 4.16201426, 4.20553516, 1., 1., 1., 1., 1., 1., 1., 1.05482755], dtype=torch.float32)
         img_meta.update(class_weight=class_weight)
     return result

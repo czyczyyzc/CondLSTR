@@ -68,7 +68,7 @@ def lane_data_prep(root_path,
     info_train_path = osp.join(root_path, '{}_infos_train_{}.pkl'.format(info_prefix, version))
     with open(info_train_path, 'wb') as file:
         pickle.dump(data, file)
-    
+
     data = dict(infos=val_data_infos, metadata=metadata)
     info_val_path = osp.join(root_path, '{}_infos_val_{}.pkl'.format(info_prefix, version))
     with open(info_val_path, 'wb') as file:
@@ -175,7 +175,7 @@ class INfoProcessor(object):
             # lane = np.array(gt_lane_packed)
             gt_lanes.append(lane)
             gt_visibility.append(np.ones_like(lane[:, 0]))
-            gt_category.append(1)
+            gt_category.append(0)
 
         # cam_K = cam_intrinsics
         # cam_E = cam_extrinsics
@@ -229,6 +229,7 @@ class INfoProcessor(object):
             'intrinsics': cam_intrinsics.tolist(),
             'extrinsics': cam_extrinsics.tolist(),
         }
+        img_path = img_path.replace(self.root, '').strip('/')
 
         img_info = {
             'img_name':    img_name,

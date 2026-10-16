@@ -8,7 +8,7 @@ from .chamfer_distance import ChamferDistance
 
 class LaneDet3DMetric(object):
 
-    def __init__(self, distance_thr=1, num_classes=1, **kwargs):
+    def __init__(self, distance_thr=30, num_classes=1, **kwargs):
         self.num_classes = num_classes
         self.lane_distance = LaneDistance(distance_thr, num_classes=num_classes)
 
@@ -18,7 +18,7 @@ class LaneDet3DMetric(object):
         tgt_points_batch = data_dict['lane_points']
         tgt_attris_batch = data_dict['lane_attris']
         img_metas_batch = data_dict['img_metas']
-        
+
         pre_points_list = []
         tgt_points_list = []
         for pre_points, tgt_points, pre_attris, tgt_attris, img_meta in \
@@ -41,10 +41,10 @@ class LaneDet3DMetric(object):
             for points_3d, attr in zip(tgt_points, tgt_attris):
                 attr = int(attr.cpu().numpy())
                 points_3d = points_3d.cpu().numpy()
-                points_3d = np.concatenate([points_3d, np.ones_like(points_3d[:, 0:1])], axis=1).T
-                points_3d = np.matmul(P_bev2ego, points_3d)
-                points_3d = points_3d.T
-                points_3d = points_3d[:, :3]
+                # points_3d = np.concatenate([points_3d, np.ones_like(points_3d[:, 0:1])], axis=1).T
+                # points_3d = np.matmul(P_bev2ego, points_3d)
+                # points_3d = points_3d.T
+                # points_3d = points_3d[:, :3]
                 points_3d = points_3d.reshape(-1)
                 tgt_points_new.append((points_3d, attr))
 
@@ -64,12 +64,12 @@ class LaneDet3DMetric(object):
 
     def __call__(self):
         eval_dict = {}
-        F1, recall, acc, chamfer_dist, F1_attr, recall_attr, acc_attr, recall_attr_all = self.lane_distance()
+        F1, recall, acc, chamfer_dist, F1_attr, recall_attr, acc_attr = self.lane_distance()
         eval_dict.update({'F1': F1, 'recall': recall, 'acc': acc, 'chamfer_dist': chamfer_dist})
 
         for i in range(self.num_classes):
-            eval_dict.update({'F1_'+str(i): F1_attr[i], 'recall_'+str(i): recall_attr[i], 'acc_'+str(i): acc_attr[i],
-                             'recall_all_'+str(i): recall_attr_all[i]})
+            eval_dict.update({
+                'F1_'+str(i): F1_attr[i], 'recall_'+str(i): recall_attr[i], 'acc_'+str(i): acc_attr[i]})
 
         eval_dict['avg'] = eval_dict['F1']
         return eval_dict
@@ -86,7 +86,6 @@ class LaneDistance(object):
         self.gt_num_attr  = [0 for _ in range(self.num_classes)]
         self.pr_num_attr  = [0 for _ in range(self.num_classes)]
         self.hit_num_attr = [0 for _ in range(self.num_classes)]
-        self.tgt_num_attr = [0 for _ in range(self.num_classes)]
 
     @staticmethod
     def lane_interpolate(lane):
@@ -95,7 +94,7 @@ class LaneDistance(object):
         x = lane[0::3]
         y = lane[1::3]
         z = lane[2::3]
-        y_min, y_max = int(min(y)), int(max(y))
+        y_min, y_max = min(y), max(y)
 
         y_x_z = list(zip(y, x, z))
         y_x_z.sort(key=lambda x: x[0])
@@ -104,15 +103,15 @@ class LaneDistance(object):
             y.append(i[0])
             x.append(i[1])
             z.append(i[2])
-        
-        y_new = list(range(y_min, y_max + 1, 1))
-        x_inter = np.interp(y_new, y, x)
-        z_inter = np.interp(y_new, y, z)
-        
+
+        y_new = np.arange(y_min, y_max + 0.1, 0.1)
+        x_new = np.interp(y_new, y, x)
+        z_new = np.interp(y_new, y, z)
+
         lane_new = [0 for _ in range(len(y_new) * 3)]
-        lane_new[0::3] = x_inter
+        lane_new[0::3] = x_new
         lane_new[1::3] = y_new
-        lane_new[2::3] = z_inter
+        lane_new[2::3] = z_new
         return lane_new
 
     def _single_lane_chamfer_distance(self, source_point, target_point):
@@ -134,7 +133,7 @@ class LaneDistance(object):
 
         dist1, dist2 = self.chamfer_distance(source_xyz, target_xyz)
         mean_chamfer_distance = (torch.mean(dist1)) + (torch.mean(dist2))
-        mean_chamfer_distance = mean_chamfer_distance.cpu().detach()
+        mean_chamfer_distance = mean_chamfer_distance.cpu().numpy()
         return mean_chamfer_distance
 
     def _eval_chamfer_distance(self, pred_point, gt_point):
@@ -149,7 +148,6 @@ class LaneDistance(object):
         gt_num_attr  = [0 for _ in range(self.num_classes)]
         pr_num_attr  = [0 for _ in range(self.num_classes)]
         hit_num_attr = [0 for _ in range(self.num_classes)]
-        tgt_num_attr = [0 for _ in range(self.num_classes)]
 
         if len(pred_point) > 0 and len(gt_point) > 0:
             dist_mat = np.zeros((len(pred_point), len(gt_point)))
@@ -157,7 +155,7 @@ class LaneDistance(object):
             # 当无法计算chamfer distance 的时候需要返回一个什么？
             return dict(chamfer_distance=0, gt_num=gt_num, pr_num=pr_num, hit_num=hit_num,
                         pr_list=pr_list, gt_list=gt_list, gt_num_attr=gt_num_attr, pr_num_attr=pr_num_attr,
-                        hit_num_attr=hit_num_attr, tgt_num_attr=tgt_num_attr)
+                        hit_num_attr=hit_num_attr)
 
         pred_point, pred_attrs = list(zip(*pred_point))
         gt_point, gt_attrs = list(zip(*gt_point))
@@ -166,9 +164,11 @@ class LaneDistance(object):
             pred_point_tmp, gt_point_tmp = [], []
             for lane in pred_point:
                 new_lane = self.lane_interpolate(lane)
+                new_lane = lane
                 pred_point_tmp.append(new_lane)
             for lane in gt_point:
                 new_lane = self.lane_interpolate(lane)
+                new_lane = lane
                 gt_point_tmp.append(new_lane)
             pred_point = pred_point_tmp
             gt_point = gt_point_tmp
@@ -176,7 +176,12 @@ class LaneDistance(object):
         for gt_attr in gt_attrs:
             if gt_attr == 255:
                 continue
-            tgt_num_attr[int(gt_attr)] += 1
+            gt_num_attr[int(gt_attr)] += 1
+
+        for pr_attr in pred_attrs:
+            if pr_attr == 255:
+                continue
+            pr_num_attr[int(pr_attr)] += 1
 
         for s_idx, t_idx in product(range(len(pred_point)), range(len(gt_point))):
             s = pred_point[s_idx]
@@ -188,36 +193,27 @@ class LaneDistance(object):
         match_index_list = linear_sum_assignment(cost_matrix)
 
         for pr_index, gt_index in zip(*match_index_list):
-            dis_val = dist_mat[pr_index, gt_index]
+            dist_val = dist_mat[pr_index, gt_index]
 
-            if dis_val < self.distance_thr:
+            if dist_val < self.distance_thr:
                 hit_num += 1
                 pr_list[pr_index] = True
                 gt_list[gt_index] = True
-                distance_sum.append(dis_val)
+                distance_sum.append(dist_val)
 
-            pr_attr = pred_attrs[pr_index]
-            gt_attr = gt_attrs[gt_index]
-
-            if gt_attr == 255:
-                continue
-            gt_num_attr[int(gt_attr)] += 1
-
-            if pr_attr == 255:
-                continue
-            pr_num_attr[int(pr_attr)] += 1
-
-            if gt_attr == pr_attr:
-                hit_num_attr[int(gt_attr)] += 1
+                pr_attr = pred_attrs[pr_index]
+                gt_attr = gt_attrs[gt_index]
+                if gt_attr == pr_attr:
+                    hit_num_attr[int(gt_attr)] += 1
 
         if len(distance_sum) > 0:
             distance_sum = sum(distance_sum) / len(distance_sum)
         else:
             distance_sum = 0
-        
+
         res = dict(chamfer_distance=distance_sum, gt_num=gt_num, pr_num=pr_num, hit_num=hit_num,
                    pr_list=pr_list, gt_list=gt_list, gt_num_attr=gt_num_attr, pr_num_attr=pr_num_attr,
-                   hit_num_attr=hit_num_attr, tgt_num_attr=tgt_num_attr)
+                   hit_num_attr=hit_num_attr)
         return res
 
     def _calc_single_img(self, pred_point, gt_point):
@@ -240,7 +236,6 @@ class LaneDistance(object):
                 self.gt_num_attr[j] += res['gt_num_attr'][j]
                 self.pr_num_attr[j] += res['pr_num_attr'][j]
                 self.hit_num_attr[j] += res['hit_num_attr'][j]
-                self.tgt_num_attr[j] += res['tgt_num_attr'][j]
 
             self.num_images += 1
 
@@ -249,18 +244,14 @@ class LaneDistance(object):
         self.gt_num_attr  = [0 for _ in range(self.num_classes)]
         self.pr_num_attr  = [0 for _ in range(self.num_classes)]
         self.hit_num_attr = [0 for _ in range(self.num_classes)]
-        self.tgt_num_attr = [0 for _ in range(self.num_classes)]
 
     def dump_state(self, state):
         state = np.concatenate([state, np.array(
             [self.chamfer_dist, self.gt_num, self.pr_num, self.hit_num, self.num_images] +
-            self.gt_num_attr + self.pr_num_attr + self.hit_num_attr + self.tgt_num_attr)], axis=0)
+            self.gt_num_attr + self.pr_num_attr + self.hit_num_attr)], axis=0)
         return state
 
     def load_state(self, state):
-        self.tgt_num_attr = list(state[-self.num_classes:])
-        state = state[:-self.num_classes]
-
         self.hit_num_attr = list(state[-self.num_classes:])
         state = state[:-self.num_classes]
 
@@ -282,15 +273,13 @@ class LaneDistance(object):
         F1_attr = [0. for _ in range(self.num_classes)]
         acc_attr = [0. for _ in range(self.num_classes)]
         recall_attr = [0. for _ in range(self.num_classes)]
-        recall_attr_all = [0. for _ in range(self.num_classes)]
         for i in range(self.num_classes):
             acc_attr[i] = self.hit_num_attr[i] / (self.pr_num_attr[i] + 1e-5)
             recall_attr[i] = self.hit_num_attr[i] / (self.gt_num_attr[i] + 1e-5)
             F1_attr[i] = acc_attr[i] * recall_attr[i] * 2.0 / (acc_attr[i] + recall_attr[i] + 1e-5)
-            recall_attr_all[i] = self.hit_num_attr[i] / (self.tgt_num_attr[i] + 1e-5)
 
         self.reset()
-        return F1, recall, acc, chamfer_dist, F1_attr, recall_attr, acc_attr, recall_attr_all
+        return F1, recall, acc, chamfer_dist, F1_attr, recall_attr, acc_attr
 
 
 

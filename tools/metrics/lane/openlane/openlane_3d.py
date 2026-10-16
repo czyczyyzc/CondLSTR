@@ -24,17 +24,17 @@ def main():
         with open(os.path.join(args.pred_dir, 'validation/test_list.txt'), 'w') as ff:
             for result in tqdm(results_list):
                 ann_path = os.path.join(args.anno_dir, 'lane3d_1000/validation',
-                                        result['image_name'].replace(',', '/').replace('.jpg', '.json'))
+                                        result['img_name'].replace(',', '/').replace('.jpg', '.json'))
                 img_path = os.path.join(args.anno_dir, 'images/validation',
-                                        result['image_name'].replace(',', '/'))
+                                        result['img_name'].replace(',', '/'))
                 res_path = os.path.join(args.pred_dir, 'validation',
-                                        result['image_name'].replace(',', '/').replace('.jpg', '.json'))
+                                        result['img_name'].replace(',', '/').replace('.jpg', '.json'))
                 if not (os.path.exists(ann_path) and os.path.exists(img_path)):
                     print(ann_path)
                     print(img_path)
                     continue
-                lanelines_pred = result['3d_res']  # [np.array(x, dtype=np.float32).T.tolist() for x in result['3d_res']]
-                lanelines_cate = result['class']
+                lanelines_pred = result['points_3d']
+                lanelines_cate = result['attris']
 
                 with open(ann_path, 'r') as file:
                     file_lines = [line for line in file]
@@ -72,20 +72,20 @@ def main():
                     '--pred_dir', args.pred_dir + '/',
                     '--test_list', os.path.join(args.pred_dir, 'validation/test_list.txt')])
 
-    for test_list in ['1000_curve.txt', '1000_intersection.txt', '1000_night.txt',
-                      '1000_extreme_weather.txt', '1000_merge_split_case.txt', '1000_updown.txt']:
-        print(os.path.join(args.anno_dir, 'lane3d_1000/test', test_list))
-        subprocess.run([sys.executable, os.path.join(current_dir, 'lane3d', 'eval_3D_lane.py'),
-                        '--dataset_dir', os.path.join(args.anno_dir, 'lane3d_1000/'),
-                        '--pred_dir', args.pred_dir + '/',
-                        '--test_list', os.path.join(args.anno_dir, 'lane3d_1000/test', test_list)])
+    # for test_list in ['1000_curve.txt', '1000_intersection.txt', '1000_night.txt',
+    #                   '1000_extreme_weather.txt', '1000_merge_split_case.txt', '1000_updown.txt']:
+    #     print(os.path.join(args.anno_dir, 'lane3d_1000/test', test_list))
+    #     subprocess.run([sys.executable, os.path.join(current_dir, 'lane3d', 'eval_3D_lane.py'),
+    #                     '--dataset_dir', os.path.join(args.anno_dir, 'lane3d_1000/'),
+    #                     '--pred_dir', args.pred_dir + '/',
+    #                     '--test_list', os.path.join(args.anno_dir, 'lane3d_1000/test', test_list)])
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Measure OpenLane's metric")
     parser.add_argument(
         "--pred_dir",
-        default='/data/gpfs/projects/punim1962/project/HDMapNet/output/test_bev_cond_lstr_attr_openlane_proj_3d_swin',
+        default='/data/gpfs/projects/punim1962/project/HDMapNet/output/test_cond_lstr_3d_res34_no2d_openlane_vote_new',
         help="Path to directory containing the predicted lanes"
     )
     parser.add_argument(
