@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.distributed as dist
 from .matcher import HungarianMatcher
 from modeling.models.losses import BinaryDiceLoss
+from modeling.models.losses.focal_loss import sigmoid_focal_loss
 from modeling.models.utils import is_dist_avail_and_initialized, get_world_size, accuracy
 
 
@@ -92,31 +93,33 @@ class SetCriterion(nn.Module):
         src_msks_bev = msks_bev[idx]                                                                               # (M1 + M2, H, W)
         tgt_msks_bev = torch.cat([tgt['gt_msk_bev'][i] for tgt, (_, i) in zip(targets, indices)])                  # (M1 + M2, H, W)
 
-        # bce loss
-        loss_bce_bev = F.binary_cross_entropy_with_logits(src_msks_bev, tgt_msks_bev, reduction='none')            # (M1 + M2, H, W)
-        loss_bce_bev = loss_bce_bev.mean(dim=(1, 2))                                                               # (M1 + M2,)
-        loss_bce_bev = loss_bce_bev.sum() / num_lanes
+        # focal loss
+        loss_focal_bev = sigmoid_focal_loss(
+            src_msks_bev, tgt_msks_bev, alpha=0.25, gamma=2.0, reduction='none')                                   # (M1 + M2, H, W)
+        loss_focal_bev = loss_focal_bev.mean(dim=(1, 2))                                                           # (M1 + M2,)
+        loss_focal_bev = loss_focal_bev.sum() / num_lanes
 
         # dice loss
         loss_iou_bev = self.dice_loss(src_msks_bev.sigmoid(), tgt_msks_bev)                                        # (M1 + M2,)
         loss_iou_bev = loss_iou_bev.sum() / num_lanes
 
-        loss_msk_bev = loss_bce_bev + loss_iou_bev * 2.0
+        loss_msk_bev = loss_focal_bev + loss_iou_bev
 
         if self.with_2d:
             src_msks_img = msks_img[idx]                                                                           # (M1 + M2, H, W)
             tgt_msks_img = torch.cat([tgt['gt_msk_img'][i] for tgt, (_, i) in zip(targets, indices)])              # (M1 + M2, H, W)
 
-            # bce loss
-            loss_bce_img = F.binary_cross_entropy_with_logits(src_msks_img, tgt_msks_img, reduction='none')        # (M1 + M2, H, W)
-            loss_bce_img = loss_bce_img.mean(dim=(1, 2))                                                           # (M1 + M2,)
-            loss_bce_img = loss_bce_img.sum() / num_lanes
+            # focal loss
+            loss_focal_img = sigmoid_focal_loss(
+                src_msks_img, tgt_msks_img, alpha=0.25, gamma=2.0, reduction='none')                               # (M1 + M2, H, W)
+            loss_focal_img = loss_focal_img.mean(dim=(1, 2))                                                       # (M1 + M2,)
+            loss_focal_img = loss_focal_img.sum() / num_lanes
 
             # dice loss
             loss_iou_img = self.dice_loss(src_msks_img.sigmoid(), tgt_msks_img)                                    # (M1 + M2,)
             loss_iou_img = loss_iou_img.sum() / num_lanes
 
-            loss_msk_img = loss_bce_img + loss_iou_img * 2.0
+            loss_msk_img = loss_focal_img + loss_iou_img
         else:
             loss_msk_img = 0.0
 

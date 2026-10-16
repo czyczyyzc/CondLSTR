@@ -16,7 +16,9 @@ Dataset adapters and evaluator wrappers for OpenLane, ONCE-3DLanes, and
 ApolloSim are under [`data/datasets/lane`](data/datasets/lane) and
 [`tools/metrics/lane`](tools/metrics/lane).
 
-The final revision-specific configurations and trained checkpoints are being
+The integrated 3D defaults implement the journal protocol: $368\times480$
+input, 80 lane queries, a $50\times32$ BEV feature map, and Focal--Dice
+heat-map supervision. The trained checkpoints and archival release are being
 packaged and will be added before publication.
 
 ## Framework
@@ -104,6 +106,17 @@ heads and losses live under
 [`modeling/models/detectors/lane`](modeling/models/detectors/lane). OpenLane,
 ONCE-3DLanes, and ApolloSim datasets, transforms, post-processing, and evaluator
 wrappers are kept in their corresponding `data` and `tools` packages.
+
+The registered 3D models use the paper configuration directly: the image
+tensor remains $368\times480$ (without padding to a different network input),
+the stride-8 image feature is $46\times60$, and the learned BEV feature is
+$50\times32$. The image and BEV target rasters are $368\times480$ and
+$400\times256$. The models use 80 lane queries; 50 LID depth bins over
+$[0,100]$ m; 50 uniform height bins over $[-5,5]$ m; and sigmoid Focal loss
+($\alpha=0.25$, $\gamma=2$) plus Dice loss for each heat map. Hungarian
+matching and training use object/category/heat-map/offset weights
+$(5,1,1,1)$, with a no-object coefficient of 0.4. The target and voting support
+scale is 16 raster cells and the inference object threshold is 0.7.
 
 Prepare the OpenLane cache:
 

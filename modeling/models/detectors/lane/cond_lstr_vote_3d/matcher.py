@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from scipy.optimize import linear_sum_assignment
 from modeling.models.losses import BinaryDiceLoss
+from modeling.models.losses.focal_loss import sigmoid_focal_loss
 
 
 class HungarianMatcher(nn.Module):
@@ -52,12 +53,10 @@ class HungarianMatcher(nn.Module):
             # Compute the attribute cost.
             # Contrary to the loss, we don't use the NLL
             out_prob = logits_cls[i].softmax(-1)                                                                 # (L, C)
-            tgt_idxs = tgt['gt_lbl_cls'].long()                                                                  # (M,)
+            tgt_idxs = tgt['gt_lbl_cls'].long().clone()                                                          # (M,)
             tgt_mask = tgt_idxs == 255                                                                           # (M,)
             tgt_idxs[tgt_mask] = 0                                                                               # (M,)
             cost_cls = -out_prob[:, tgt_idxs] * (1 - tgt_mask.float())                                           # (L, M)
-
-            cost_cls = 0.0
 
             # Compute the msk cost
             out_msks_bev = msks_bev[i]                                                                           # (L, H, W)
@@ -65,18 +64,19 @@ class HungarianMatcher(nn.Module):
             out_msks_bev = out_msks_bev.unsqueeze(1).repeat(1, tgt_msks_bev.size(0), 1, 1)                       # (L, M, H, W)
             tgt_msks_bev = tgt_msks_bev.unsqueeze(0).repeat(out_msks_bev.size(0), 1, 1, 1)                       # (L, M, H, W)
 
-            # bce loss
-            cost_bce_bev = F.binary_cross_entropy_with_logits(out_msks_bev, tgt_msks_bev, reduction='none')      # (L, M, H, W)
-            cost_bce_bev = cost_bce_bev.mean(dim=(2, 3))                                                         # (L, M)
+            # focal loss
+            cost_focal_bev = sigmoid_focal_loss(
+                out_msks_bev, tgt_msks_bev, alpha=0.25, gamma=2.0, reduction='none')                             # (L, M, H, W)
+            cost_focal_bev = cost_focal_bev.mean(dim=(2, 3))                                                     # (L, M)
 
             # dice loss
             out_msks_bev = out_msks_bev.flatten(0, 1).sigmoid()                                                  # (L * M, H, W)
             tgt_msks_bev = tgt_msks_bev.flatten(0, 1)                                                            # (L * M, H, W)
 
             cost_iou_bev = self.dice_loss(out_msks_bev, tgt_msks_bev)                                            # (L * M,)
-            cost_iou_bev = cost_iou_bev.view(cost_bce_bev.shape)                                                 # (L, M)
+            cost_iou_bev = cost_iou_bev.view(cost_focal_bev.shape)                                               # (L, M)
 
-            cost_msk_bev = cost_bce_bev + cost_iou_bev * 2.0
+            cost_msk_bev = cost_focal_bev + cost_iou_bev
 
             if self.with_2d:
                 out_msks_img = msks_img[i]                                                                       # (L, H, W)
@@ -84,18 +84,19 @@ class HungarianMatcher(nn.Module):
                 out_msks_img = out_msks_img.unsqueeze(1).repeat(1, tgt_msks_img.size(0), 1, 1)                   # (L, M, H, W)
                 tgt_msks_img = tgt_msks_img.unsqueeze(0).repeat(out_msks_img.size(0), 1, 1, 1)                   # (L, M, H, W)
 
-                # bce loss
-                cost_bce_img = F.binary_cross_entropy_with_logits(out_msks_img, tgt_msks_img, reduction='none')  # (L, M, H, W)
-                cost_bce_img = cost_bce_img.mean(dim=(2, 3))                                                     # (L, M)
+                # focal loss
+                cost_focal_img = sigmoid_focal_loss(
+                    out_msks_img, tgt_msks_img, alpha=0.25, gamma=2.0, reduction='none')                         # (L, M, H, W)
+                cost_focal_img = cost_focal_img.mean(dim=(2, 3))                                                 # (L, M)
 
                 # dice loss
                 out_msks_img = out_msks_img.flatten(0, 1).sigmoid()                                              # (L * M, H, W)
                 tgt_msks_img = tgt_msks_img.flatten(0, 1)                                                        # (L * M, H, W)
 
                 cost_iou_img = self.dice_loss(out_msks_img, tgt_msks_img)                                        # (L * M,)
-                cost_iou_img = cost_iou_img.view(cost_bce_img.shape)                                             # (L, M)
+                cost_iou_img = cost_iou_img.view(cost_focal_img.shape)                                           # (L, M)
 
-                cost_msk_img = cost_bce_img + cost_iou_img * 2.0
+                cost_msk_img = cost_focal_img + cost_iou_img
             else:
                 cost_msk_img = 0.0
 

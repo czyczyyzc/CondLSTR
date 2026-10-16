@@ -255,9 +255,9 @@ class CondLSTRVote3D(nn.Module):
             head_channels=branch_channels)
 
         loss_weights = dict(
-            obj_weight=10.,
-            cls_weight=10.,
-            msk_weight=10.,
+            obj_weight=5.,
+            cls_weight=1.,
+            msk_weight=1.,
             reg_weight=1.,)
 
         self.loss = CondLSTRVote3DLoss(

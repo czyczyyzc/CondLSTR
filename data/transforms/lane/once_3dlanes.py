@@ -8,10 +8,10 @@ def once_3dlanes_transforms(train=True, version='v1.0', **kwargs):
         mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
     keys = ['img', 'img_mask', 'bev_mask', 'lane_points', 'lane_attris', 'depth_prior']
 
-    img_w = 768   # 480  # 960
-    img_h = 512   # 384  # 640
-    bev_w = 384   # 256  # 512
-    bev_h = 768   # 512  # 1024
+    img_w = 480
+    img_h = 368
+    bev_w = 256
+    bev_h = 400
     bev_range = np.array([-10, 3, 10, 103])
     bev_z_scale = 20
     cut_height = 0
@@ -21,7 +21,7 @@ def once_3dlanes_transforms(train=True, version='v1.0', **kwargs):
                 img_h, img_w, bev_h, bev_w, bev_range, bev_z_scale, img_flip_p=0.5, img_rotate=10,
                 cut_height=cut_height, theta_x=0, theta_y=0, theta_z=0, tx=0, ty=0, tz=0),
             Normalize(**img_norm_cfg),
-            Pad(size_divisor=32),
+            Pad(size=(img_h, img_w)),
             ToTensor(keys),
         ])
     else:
@@ -30,7 +30,7 @@ def once_3dlanes_transforms(train=True, version='v1.0', **kwargs):
                 img_h, img_w, bev_h, bev_w, bev_range, bev_z_scale, img_flip_p=0, img_rotate=0,
                 cut_height=cut_height, theta_x=0, theta_y=0, theta_z=0, tx=0, ty=0, tz=0),
             Normalize(**img_norm_cfg),
-            Pad(size_divisor=32),
+            Pad(size=(img_h, img_w)),
             ToTensor(keys),
         ])
     return data_transforms, collate_fn
