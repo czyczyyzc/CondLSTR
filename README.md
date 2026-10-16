@@ -16,6 +16,9 @@ Dataset adapters and evaluator wrappers for OpenLane, ONCE-3DLanes, and
 ApolloSim are under [`data/datasets/lane`](data/datasets/lane) and
 [`tools/metrics/lane`](tools/metrics/lane).
 
+The final revision-specific configurations and trained checkpoints are being
+packaged and will be added before publication.
+
 ## Framework
    ![The framwork of CondLSTR](docs/framework.jpg)
 
