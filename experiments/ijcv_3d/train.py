@@ -16,7 +16,7 @@ from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader, DistributedSampler, Subset
 from data.datasets.lane.openlane.openlane import OpenLaneDataset
 from experiments.ijcv_3d.data import openlane_transforms_3d, validate_geometry
-from experiments.ijcv_3d.model import build_model
+from modeling.models.models.lane.cond_lstr_3d import build_model
 from experiments.ijcv_3d.geometry import bev_points_to_ego
 from experiments.ijcv_3d.io import autocast_dtype, autocast_precision, move, write_json
 from tools.metrics.lane.openlane.lane3d.eval_3D_lane import LaneEval

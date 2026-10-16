@@ -17,7 +17,7 @@ from torch.utils.flop_counter import FlopCounterMode
 
 from data.datasets.lane.openlane.openlane import OpenLaneDataset
 from experiments.ijcv_3d.data import openlane_transforms_3d, validate_geometry
-from experiments.ijcv_3d.model import build_model
+from modeling.models.models.lane.cond_lstr_3d import build_model
 from experiments.ijcv_3d.io import autocast_dtype, autocast_precision, move, write_json
 
 

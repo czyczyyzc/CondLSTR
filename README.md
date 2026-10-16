@@ -5,9 +5,14 @@ detection and the 3D journal extension. The 3D model uses lane representations
 as the key/value memory for BEV construction and generates the dynamic detection
 kernels used in both image and BEV views.
 
-The journal implementation, exact configurations, OpenLane training/evaluation
-entry points, complexity profiler, and controlled variants are under
-[`experiments/ijcv_3d`](experiments/ijcv_3d). Dataset adapters and official
+The canonical unified journal model is
+[`modeling/models/models/lane/cond_lstr_3d.py`](modeling/models/models/lane/cond_lstr_3d.py),
+and its paired image-view/BEV objective is
+[`modeling/models/detectors/lane/cond_lstr_vote_3d/journal_loss.py`](modeling/models/detectors/lane/cond_lstr_vote_3d/journal_loss.py).
+The exact configurations, OpenLane training/evaluation entry points, complexity
+profiler, and controlled variants are under
+[`experiments/ijcv_3d`](experiments/ijcv_3d); these runners import the canonical
+model rather than keeping a second implementation. Dataset adapters and official
 evaluator wrappers for OpenLane, ONCE-3DLanes, and ApolloSim are under
 [`data/datasets/lane`](data/datasets/lane) and
 [`tools/metrics/lane`](tools/metrics/lane).
@@ -86,11 +91,14 @@ evaluator wrappers for OpenLane, ONCE-3DLanes, and ApolloSim are under
 
 ## Training & Evaluation
 
-### Journal 3D model
+### Unified journal model
 
-The released configuration uses a `368 x 480` input, a `50 x 32` BEV feature,
-a `400 x 256` output raster, 80 lane queries, and 50 training epochs. Prepare
-the OpenLane cache once:
+The complete configuration jointly trains the image-view and BEV branches. The
+same image-conditioned lane representations generate both prediction branches
+and serve as the BEV decoder memory, while one paired assignment supervises the
+two views. It uses a `368 x 480` input, a `50 x 32` BEV feature, a `400 x 256`
+output raster, 80 lane queries, and 50 training epochs. Prepare the OpenLane
+cache once:
 
 ```bash
 python data/datasets/lane/openlane/preprocess.py \
